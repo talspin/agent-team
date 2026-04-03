@@ -33,10 +33,18 @@ Input: merge commit SHA, expected prod URL (if known)
 8. **Check deployment config** — review Dockerfile, CI/CD pipeline, Terraform, Helm, or equivalent for correctness
 
 ### CD monitoring process
-1. **Find the deploy run** — `gh run list --branch main --limit 5` to identify the workflow run triggered by the merge commit
-2. **Poll until complete** — `gh run view <run-id>` every 60 seconds until `status` is `completed`
-3. **On success** — extract `$PROD_URL` from workflow outputs or deployment environment (`gh run view <run-id> --json jobs` or environment URL from `gh api`); report `deployed` with the prod URL
-4. **On failure** — fetch the failed job logs: `gh run view <run-id> --log-failed`; diagnose the root cause; determine whether the fix is:
+1. **Find the deploy run** — `gh run list --branch main --limit 5` to identify the workflow run triggered by the merge commit; record `$RUN_ID`
+2. **Estimate wait time from history** — before polling, fetch the last 10 completed runs of the same workflow to compute a baseline:
+   ```
+   gh run list --workflow <workflow-name> --status completed --limit 10 --json databaseId,createdAt,updatedAt
+   ```
+   Compute the median duration from `createdAt` → `updatedAt`. Use that as `$ESTIMATED_DURATION`. If no history exists, default to 120 seconds.
+3. **Wait the estimated duration** — `sleep $ESTIMATED_DURATION` before making the first status check; this avoids polling a run that is clearly still in progress
+4. **Check and poll with backoff** — after the initial wait, check status: `gh run view $RUN_ID --json status,conclusion`
+   - If `status` is not `completed`: sleep for 20% of `$ESTIMATED_DURATION` (min 30s, max 120s) and check again; repeat until `completed`
+   - If `status` is `completed`: proceed
+5. **On success** — extract `$PROD_URL` from workflow outputs or deployment environment (`gh run view $RUN_ID --json jobs` or environment URL from `gh api`); report `deployed` with the prod URL
+6. **On failure** — fetch the failed job logs: `gh run view $RUN_ID --log-failed`; diagnose the root cause; determine whether the fix is:
    - A **config/infra issue** (SRE owns): propose a fix and report `needs-infra-fix` with the fix details
    - A **code issue** (implementer owns): report `needs-code-fix` with the failure details for orchestrator to route to implementer
    - **Transient** (retry safe): report `retry` — orchestrator will re-trigger the CD run
@@ -98,7 +106,9 @@ For **monitor-cd**, end your response with:
 - run_id: <gh actions run id>
 - run_url: <gh actions run url>
 - prod_url: <live prod url, if deployed successfully>
-- duration_seconds: <how long the deploy took>
+- estimated_duration_seconds: <median of last 10 runs used for initial sleep>
+- actual_duration_seconds: <how long this run actually took>
+- poll_count: <number of gh run view calls made after initial sleep>
 - summary: <1-2 sentence assessment>
 - failure_logs: <relevant excerpt from failed job logs, if any>
 - fix:
