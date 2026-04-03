@@ -9,6 +9,7 @@ This repo defines a reusable Claude Code subagent dev team with well-defined rol
 | `orchestrator` | Opus | Full pipeline coordination, GitHub issue lifecycle, agent communication log |
 | `pm` | Sonnet | Specs and acceptance criteria |
 | `architect` | Opus | Implementation plans |
+| `git-ops` | Sonnet | Branch creation, rebase, conflict resolution, worktree cleanup |
 | `implementer` | Sonnet | Code (worktree-isolated), local validation (unit/integration/e2e/prober/docker) |
 | `reviewer` | Opus | Code correctness, security, conventions |
 | `sre` | Opus | Production safety, infra, runbooks, deployment config, prod validation |
@@ -21,11 +22,14 @@ This repo defines a reusable Claude Code subagent dev team with well-defined rol
 Feature Request
     → pm          → Spec                      (human reviews open_questions)
     → architect   → Plan                      ← HUMAN APPROVAL GATE
+    → git-ops     → branch created
     → implementer → Code + tests
+    → git-ops     → rebase + check-ready      (before PR)
     → reviewer    → approve | request_changes | block
     → sre         → prod-safe | needs-changes | block
-    → qa          → pass | fail               (tests + CI/CD)
+    → qa          → pass | fail               (tests + CI/CD + PR checks)
     → tech-writer → docs updated
+    → git-ops     → cleanup
     → DONE
 ```
 

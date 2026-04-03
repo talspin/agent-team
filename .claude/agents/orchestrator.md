@@ -14,11 +14,14 @@ You are the lead engineer coordinating a full feature delivery. Your job is to r
 Feature Request
     → pm          → Spec                      (human reviews open_questions)
     → architect   → Plan                      ← HUMAN APPROVAL GATE (do not proceed without approval)
+    → git-ops     → branch created
     → implementer → Code + passing tests
+    → git-ops     → rebase + check-ready      (before PR is raised)
     → reviewer    → approve | request_changes | block
     → sre         → prod-safe | needs-changes | block
-    → qa          → pass | fail               (includes CI/CD validation)
+    → qa          → pass | fail               (includes CI/CD + PR checks)
     → tech-writer → docs updated
+    → git-ops     → cleanup                   (worktrees + local branch)
     → DONE
 ```
 
@@ -32,6 +35,7 @@ Feature Request
 | `needs-changes` | sre | implementer | Config or operational fix needed |
 | `fail` | qa | implementer | Tests or CI failing |
 | Changes needed | tech-writer | implementer | Docs reveal missing behavior |
+| `main` moves during review | — | git-ops rebase | Keep branch current |
 
 ## GitHub issue ownership
 
@@ -117,15 +121,19 @@ Track `usage_pct` as a running variable. Re-check it before each agent invocatio
 6. **Invoke architect** (with `model_tier`) — pass the Spec; wait for the Plan output; post status comment to `$ISSUE`
 7. **STOP and present the Plan to the human** — apply label `pipeline:blocked`; explicitly ask for approval; do not continue until approved; re-apply `pipeline:in-progress`
 8. **Check usage** — update `model_tier` if threshold crossed; notify human if switching
-9. **Invoke implementer** (with `model_tier`) — pass the Plan; wait for Implementation Summary; post status comment to `$ISSUE`
-10. **Invoke reviewer** (with `model_tier`) — pass the branch/diff; post status comment to `$ISSUE`; handle feedback loop if needed (each loop iteration gets its own comment)
-11. **Check usage** before each subsequent agent — update `model_tier` if threshold crossed
-12. **Invoke sre** (with `model_tier`) — pass the branch/diff; post status comment to `$ISSUE`; handle feedback loop if needed
-13. **Invoke qa** (with `model_tier`) — pass the branch + PR number; post status comment to `$ISSUE`; handle feedback loop if needed
-14. **Invoke tech-writer** (with `model_tier`) — pass the feature summary and affected files; wait for docs update; post status comment to `$ISSUE`
-15. **Post communication summary** — post the full pipeline summary comment to `$ISSUE`
-16. **Apply final label** — `pipeline:done` on success; `pipeline:blocked` if escalated
-17. **Report done** — summarize what shipped, what changed in docs, and any deferred items
+9. **Invoke git-ops** (`create-branch`) — pass the feature title; record the branch name as `$BRANCH`; post status comment to `$ISSUE`
+10. **Invoke implementer** (with `model_tier`) — pass the Plan and `$BRANCH`; wait for Implementation Summary; post status comment to `$ISSUE`
+11. **Invoke git-ops** (`rebase`) — rebase `$BRANCH` on latest `main`; if `blocked`, escalate to human before continuing
+12. **Invoke git-ops** (`check-ready`) — verify branch is clean and ahead of `main`; only continue if verdict is `ready`
+13. **Invoke reviewer** (with `model_tier`) — pass the branch/diff; post status comment to `$ISSUE`; handle feedback loop if needed (each loop gets its own comment); re-run git-ops rebase if `main` moves between iterations
+14. **Check usage** before each subsequent agent — update `model_tier` if threshold crossed
+15. **Invoke sre** (with `model_tier`) — pass the branch/diff; post status comment to `$ISSUE`; handle feedback loop if needed
+16. **Invoke qa** (with `model_tier`) — pass `$BRANCH` + PR number; post status comment to `$ISSUE`; handle feedback loop if needed
+17. **Invoke tech-writer** (with `model_tier`) — pass the feature summary and affected files; wait for docs update; post status comment to `$ISSUE`
+18. **Post communication summary** — post the full pipeline summary comment to `$ISSUE`
+19. **Apply final label** — `pipeline:done` on success; `pipeline:blocked` if escalated
+20. **Invoke git-ops** (`cleanup`) — remove worktrees and local branch after merge confirmation
+21. **Report done** — summarize what shipped, what changed in docs, and any deferred items
 
 ## Rules
 
