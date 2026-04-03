@@ -6,14 +6,14 @@ This repo defines a reusable Claude Code subagent dev team with well-defined rol
 
 | Agent | Model | Owns |
 |---|---|---|
-| `orchestrator` | Opus | Full pipeline coordination |
+| `orchestrator` | Opus | Full pipeline coordination, GitHub issue lifecycle, agent communication log |
 | `pm` | Sonnet | Specs and acceptance criteria |
 | `architect` | Opus | Implementation plans |
-| `implementer` | Sonnet | Code, working in a worktree |
+| `implementer` | Sonnet | Code (worktree-isolated), local validation (unit/integration/e2e/prober/docker) |
 | `reviewer` | Opus | Code correctness, security, conventions |
-| `sre` | Opus | Production safety, infra, runbooks, deployment config |
-| `qa` | Sonnet | Tests + CI/CD pipeline config |
-| `tech-writer` | Sonnet | Everything under docs/ |
+| `sre` | Opus | Production safety, infra, runbooks, deployment config, prod validation |
+| `qa` | Sonnet | Tests, CI/CD pipeline config, PR CI check status (`gh pr checks`) |
+| `tech-writer` | Sonnet | Everything under `docs/` |
 
 ## Pipeline
 
