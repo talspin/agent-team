@@ -6,13 +6,13 @@ This repo defines a reusable Claude Code subagent dev team with well-defined rol
 
 | Agent | Model | Owns |
 |---|---|---|
-| `orchestrator` | Opus | Full pipeline coordination, GitHub issue lifecycle, agent communication log, CD monitoring |
+| `orchestrator` | Opus | Full pipeline coordination, GitHub issue lifecycle, agent communication log |
 | `pm` | Sonnet | Specs and acceptance criteria |
 | `architect` | Opus | Implementation plans; answers PM open_questions |
 | `git-ops` | Sonnet | Branch creation, rebase, conflict resolution, PR merging, worktree cleanup |
 | `implementer` | Sonnet | Code (worktree-isolated), local validation (unit/integration/e2e/prober/docker) |
 | `reviewer` | Opus | Code correctness, security, conventions |
-| `sre` | Opus | Production safety, infra, runbooks, deployment config, prod validation |
+| `sre` | Opus | Production safety, infra, runbooks, deployment config, CD monitoring |
 | `qa` | Sonnet | Tests, CI/CD pipeline config, PR CI check status (`gh pr checks`), prod feature test spec |
 | `tech-writer` | Sonnet | Everything under `docs/` |
 | `browser-agent` | Sonnet | Production acceptance testing (executes prod feature test spec after CD deploys) |
@@ -31,7 +31,7 @@ Feature Request
     → qa            → pass | fail               (tests + CI/CD + PR checks + prod feature test spec)
     → tech-writer   → docs updated
     → git-ops       → merge PR                  (auto-merge; retry on failure → git-ops diagnose)
-    → orchestrator  → monitor CD deployment     (failure → sre diagnose → retry)
+    → sre           → monitor CD deployment     (sre polls workflow; failure → sre fix or implementer)
     → browser-agent → test in prod              (fail → architect root-cause → implementer)
     → Close GitHub issue
     → git-ops       → cleanup

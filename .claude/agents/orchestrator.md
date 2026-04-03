@@ -22,7 +22,7 @@ Feature Request
     → qa            → pass | fail               (includes CI/CD + PR checks + prod feature test spec)
     → tech-writer   → docs updated
     → git-ops       → merge PR                  (auto-merge; retry on failure → git-ops diagnose)
-    → orchestrator  → monitor CD deployment     (failure → sre diagnose → retry)
+    → sre           → monitor CD deployment     (sre polls workflow; failure → sre fix or implementer)
     → browser-agent → test in prod              (fail → architect root-cause → implementer)
     → Close GitHub issue
     → git-ops       → cleanup
@@ -143,12 +143,13 @@ Track `usage_pct` as a running variable. Re-check before each agent invocation.
     - If merge fails: retry up to 3 times automatically
     - If still failing: re-invoke git-ops with the error output for diagnosis and a resolution attempt
     - If git-ops returns `blocked` after diagnosis: post to `$ISSUE` with full error context and apply label `pipeline:blocked`; stop pipeline
-20. **Monitor CD deployment** — poll the CD workflow triggered by the merge commit:
-    - Run `gh run list --branch main --limit 5` to find the deploy run
-    - Poll `gh run view <run-id>` every 60 seconds until status is `completed`
-    - Post a status comment to `$ISSUE` with the deploy run URL when monitoring starts and when it completes
-    - If the CD workflow fails: invoke sre with the workflow failure logs; sre diagnoses and either (a) routes a config fix to implementer (restart from step 11) or (b) approves a retry of the CD run; post findings to `$ISSUE`
-    - If CD succeeds: record `$PROD_URL` from the workflow outputs or deployment environment
+20. **Hand off CD monitoring to sre** — invoke sre in `monitor-cd` mode, passing the merge commit SHA:
+    - SRE polls the CD workflow and reports back with a `CD Monitor Report`
+    - Post sre's status comment to `$ISSUE` when the report arrives
+    - If sre returns `deployed`: record `$PROD_URL` from the report and proceed
+    - If sre returns `retry`: re-invoke sre in `monitor-cd` mode for the new run (up to 2 retries)
+    - If sre returns `needs-infra-fix`: sre owns the fix; wait for sre to resolve, then re-invoke sre `monitor-cd`
+    - If sre returns `needs-code-fix`: route the failure details to implementer (restart from step 11); after implementer fixes and a new PR merges, re-invoke sre `monitor-cd`
 21. **Invoke browser-agent** — pass `prod_feature_test_spec` from QA and `$PROD_URL`; wait for Prod Test Report; post status comment to `$ISSUE`:
     - If `pass`: proceed
     - If `fail` (iterations 1–2): route failures back to implementer; after fix restart from step 11
