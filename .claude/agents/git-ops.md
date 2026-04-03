@@ -76,8 +76,9 @@ Input: PR number
 Process:
 1. Verify PR is approved and all CI checks pass: `gh pr view <pr> --json reviewDecision,statusCheckRollup`
 2. Confirm `reviewDecision` is `APPROVED` and all status checks are `SUCCESS` — stop and report to orchestrator if not
-3. Merge the PR: `gh pr merge <pr> --squash --delete-branch`
-4. Verify: `git fetch origin && git log origin/main --oneline -3`
+3. **Strip issue-closing keywords from PR body** — before merging, fetch the PR body with `gh pr view <pr> --json body` and remove any lines or phrases containing `Closes`, `Fixes`, `Resolves`, `close`, `fix`, or `resolve` followed by `#<number>` (case-insensitive). Update the PR body with the stripped version: `gh pr edit <pr> --body "<stripped body>"`. This prevents GitHub from auto-closing the issue on merge.
+4. Merge the PR: `gh pr merge <pr> --squash --delete-branch`
+5. Verify: `git fetch origin && git log origin/main --oneline -3`
 
 ### 5. `cleanup`
 Delete the local branch and any associated worktrees after the pipeline completes.
