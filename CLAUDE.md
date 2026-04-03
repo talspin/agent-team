@@ -6,31 +6,35 @@ This repo defines a reusable Claude Code subagent dev team with well-defined rol
 
 | Agent | Model | Owns |
 |---|---|---|
-| `orchestrator` | Opus | Full pipeline coordination, GitHub issue lifecycle, agent communication log |
+| `orchestrator` | Opus | Full pipeline coordination, GitHub issue lifecycle, agent communication log, CD monitoring |
 | `pm` | Sonnet | Specs and acceptance criteria |
-| `architect` | Opus | Implementation plans |
+| `architect` | Opus | Implementation plans; answers PM open_questions |
 | `git-ops` | Sonnet | Branch creation, rebase, conflict resolution, PR merging, worktree cleanup |
 | `implementer` | Sonnet | Code (worktree-isolated), local validation (unit/integration/e2e/prober/docker) |
 | `reviewer` | Opus | Code correctness, security, conventions |
 | `sre` | Opus | Production safety, infra, runbooks, deployment config, prod validation |
-| `qa` | Sonnet | Tests, CI/CD pipeline config, PR CI check status (`gh pr checks`) |
+| `qa` | Sonnet | Tests, CI/CD pipeline config, PR CI check status (`gh pr checks`), prod feature test spec |
 | `tech-writer` | Sonnet | Everything under `docs/` |
+| `browser-agent` | Sonnet | Production acceptance testing (executes prod feature test spec after CD deploys) |
 
 ## Pipeline
 
 ```
 Feature Request
-    → pm          → Spec                      (human reviews open_questions)
-    → architect   → Plan                      ← HUMAN APPROVAL GATE
-    → git-ops     → branch created
-    → implementer → Code + tests
-    → git-ops     → rebase + check-ready      (before PR)
-    → reviewer    → approve | request_changes | block
-    → sre         → prod-safe | needs-changes | block
-    → qa          → pass | fail               (tests + CI/CD + PR checks)
-    → tech-writer → docs updated
-    → git-ops     → merge PR                  (auto-merge after all checks pass)
-    → git-ops     → cleanup
+    → pm            → Spec                      (architect answers open_questions)
+    → architect     → Plan                      ← HUMAN APPROVAL GATE
+    → git-ops       → branch created
+    → implementer   → Code + tests
+    → git-ops       → rebase + check-ready      (before PR)
+    → reviewer      → approve | request_changes | block
+    → sre           → prod-safe | needs-changes | block
+    → qa            → pass | fail               (tests + CI/CD + PR checks + prod feature test spec)
+    → tech-writer   → docs updated
+    → git-ops       → merge PR                  (auto-merge after all checks pass)
+    → orchestrator  → monitor CD deployment
+    → browser-agent → test in prod
+    → Close GitHub issue                        (only after browser-agent passes)
+    → git-ops       → cleanup
     → DONE
 ```
 
@@ -43,6 +47,7 @@ Feature Request
 | `block` | sre | architect |
 | `needs-changes` | sre | implementer |
 | `fail` | qa | implementer |
+| `fail` | browser-agent | implementer |
 
 ## Handoff Contracts
 
@@ -106,6 +111,18 @@ Every agent outputs a structured block at the end of their response. This is the
 - ci_pipeline_changes: []
 - ci_status: passing | failing | not_run
 - failures: []  # each: { test, file, error, likely_cause, suggestion }
+- prod_feature_test_spec: []  # each: { scenario, acceptance_criterion, steps, expected, type }
+```
+
+### Browser-agent output
+```
+## Prod Test Report
+- verdict: pass | fail
+- prod_url:
+- deployment_confirmed: true | false
+- version_signal:
+- scenarios: []  # each: { name, status, request, response, evidence }
+- failures: []  # each: { scenario, expected, actual, suggestion }
 ```
 
 ### Tech-writer output
@@ -123,8 +140,12 @@ Every agent outputs a structured block at the end of their response. This is the
 - Reviewer `block` → back to Architect; `request_changes` → back to Implementer
 - SRE `block` → back to Architect; `needs-changes` → back to Implementer
 - QA `fail` → back to Implementer
+- QA must produce a `prod_feature_test_spec` before the PR is merged
 - git-ops auto-merges the PR after Reviewer approves AND SRE approves AND QA passes AND docs are updated — no human approval required for merge
 - Docs must be updated before the PR is merged
+- CD deployment must complete successfully before browser-agent is invoked
+- browser-agent `fail` → back to Implementer (up to 3 iterations, then escalate to human)
+- GitHub issue is closed only after browser-agent passes — NOT on PR merge
 
 ## Conventions
 
