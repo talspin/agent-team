@@ -21,19 +21,19 @@ This repo defines a reusable Claude Code subagent dev team with well-defined rol
 
 ```
 Feature Request
-    → pm            → Spec                      (architect answers open_questions)
-    → architect     → Plan                      ← HUMAN APPROVAL GATE
+    → pm            → Spec                      (architect answers open_questions; proceed automatically)
+    → architect     → Plan                      (reviewer self-reviews; loop back to architect if blocked)
     → git-ops       → branch created
     → implementer   → Code + tests
-    → git-ops       → rebase + check-ready      (before PR)
+    → git-ops       → rebase + check-ready      (conflicts → git-ops resolve → implementer if needed)
     → reviewer      → approve | request_changes | block
     → sre           → prod-safe | needs-changes | block
     → qa            → pass | fail               (tests + CI/CD + PR checks + prod feature test spec)
     → tech-writer   → docs updated
-    → git-ops       → merge PR                  (auto-merge after all checks pass)
-    → orchestrator  → monitor CD deployment
-    → browser-agent → test in prod
-    → Close GitHub issue                        (only after browser-agent passes)
+    → git-ops       → merge PR                  (auto-merge; retry on failure → git-ops diagnose)
+    → orchestrator  → monitor CD deployment     (failure → sre diagnose → retry)
+    → browser-agent → test in prod              (fail → architect root-cause → implementer)
+    → Close GitHub issue
     → git-ops       → cleanup
     → DONE
 ```
@@ -136,16 +136,17 @@ Every agent outputs a structured block at the end of their response. This is the
 
 ## Quality Gates
 
-- Architect plan must be approved by a human before Implementer starts
-- Reviewer `block` → back to Architect; `request_changes` → back to Implementer
+- Architect plan is self-reviewed by reviewer before implementer starts — no human approval required
+- Reviewer `block` (plan) → back to Architect (max 2x, then proceed with note); `block` (code) → back to Architect; `request_changes` → back to Implementer
 - SRE `block` → back to Architect; `needs-changes` → back to Implementer
 - QA `fail` → back to Implementer
 - QA must produce a `prod_feature_test_spec` before the PR is merged
-- git-ops auto-merges the PR after Reviewer approves AND SRE approves AND QA passes AND docs are updated — no human approval required for merge
+- git-ops auto-merges the PR after Reviewer approves AND SRE approves AND QA passes AND docs are updated
 - Docs must be updated before the PR is merged
-- CD deployment must complete successfully before browser-agent is invoked
-- browser-agent `fail` → back to Implementer (up to 3 iterations, then escalate to human)
+- CD deployment must complete successfully before browser-agent is invoked; failure routes to SRE
+- browser-agent `fail` (1–2x) → back to Implementer; (3rd time) → architect root-cause analysis
 - GitHub issue is closed only after browser-agent passes — NOT on PR merge
+- Pipeline runs fully automated — no human intervention at any step
 
 ## Conventions
 
