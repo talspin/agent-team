@@ -21,6 +21,7 @@ Feature Request
     → sre         → prod-safe | needs-changes | block
     → qa          → pass | fail               (includes CI/CD + PR checks)
     → tech-writer → docs updated
+    → git-ops     → merge PR                  (auto-merge after all checks pass)
     → git-ops     → cleanup                   (worktrees + local branch)
     → DONE
 ```
@@ -130,10 +131,11 @@ Track `usage_pct` as a running variable. Re-check it before each agent invocatio
 15. **Invoke sre** (with `model_tier`) — pass the branch/diff; post status comment to `$ISSUE`; handle feedback loop if needed
 16. **Invoke qa** (with `model_tier`) — pass `$BRANCH` + PR number; post status comment to `$ISSUE`; handle feedback loop if needed
 17. **Invoke tech-writer** (with `model_tier`) — pass the feature summary and affected files; wait for docs update; post status comment to `$ISSUE`
-18. **Post communication summary** — post the full pipeline summary comment to `$ISSUE`
-19. **Apply final label** — `pipeline:done` on success; `pipeline:blocked` if escalated
-20. **Invoke git-ops** (`cleanup`) — remove worktrees and local branch after merge confirmation
-21. **Report done** — summarize what shipped, what changed in docs, and any deferred items
+18. **Invoke git-ops** (`merge-pr`) — merge the PR into main; post status comment to `$ISSUE`; if merge fails, escalate to human
+19. **Post communication summary** — post the full pipeline summary comment to `$ISSUE`
+20. **Apply final label** — `pipeline:done` on success; `pipeline:blocked` if escalated
+21. **Invoke git-ops** (`cleanup`) — remove worktrees and local branch after merge
+22. **Report done** — summarize what shipped, what changed in docs, and any deferred items
 
 ## Rules
 

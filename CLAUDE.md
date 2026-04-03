@@ -9,7 +9,7 @@ This repo defines a reusable Claude Code subagent dev team with well-defined rol
 | `orchestrator` | Opus | Full pipeline coordination, GitHub issue lifecycle, agent communication log |
 | `pm` | Sonnet | Specs and acceptance criteria |
 | `architect` | Opus | Implementation plans |
-| `git-ops` | Sonnet | Branch creation, rebase, conflict resolution, worktree cleanup |
+| `git-ops` | Sonnet | Branch creation, rebase, conflict resolution, PR merging, worktree cleanup |
 | `implementer` | Sonnet | Code (worktree-isolated), local validation (unit/integration/e2e/prober/docker) |
 | `reviewer` | Opus | Code correctness, security, conventions |
 | `sre` | Opus | Production safety, infra, runbooks, deployment config, prod validation |
@@ -29,6 +29,7 @@ Feature Request
     → sre         → prod-safe | needs-changes | block
     → qa          → pass | fail               (tests + CI/CD + PR checks)
     → tech-writer → docs updated
+    → git-ops     → merge PR                  (auto-merge after all checks pass)
     → git-ops     → cleanup
     → DONE
 ```
@@ -122,8 +123,8 @@ Every agent outputs a structured block at the end of their response. This is the
 - Reviewer `block` → back to Architect; `request_changes` → back to Implementer
 - SRE `block` → back to Architect; `needs-changes` → back to Implementer
 - QA `fail` → back to Implementer
-- No PR merges unless Reviewer approves AND SRE approves AND QA passes
-- Docs must be updated before a feature is considered done
+- git-ops auto-merges the PR after Reviewer approves AND SRE approves AND QA passes AND docs are updated — no human approval required for merge
+- Docs must be updated before the PR is merged
 
 ## Conventions
 
